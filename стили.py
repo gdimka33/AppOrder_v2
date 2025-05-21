@@ -21,7 +21,12 @@ class СтилиПриложения:
         self.button_config = {
             'relief': 'flat',
             'bg': '#f0f0f0',
-            'activebackground': '#e5e5e5',
-            'borderwidth': 1,
-            'padx': 10
+            'activebackground': '#f0f0f0',  # Такой же как основной фон
+            'borderwidth': 0,
+            'highlightthickness': 0,
+            'takefocus': 0,  # Отключаем фокус
+            'padx': 10,
+            'pady': 5,  # Добавляем отступ по вертикали
+            'height': 1,  # Устанавливаем высоту кнопки
+            'overrelief': 'flat'  # Отключаем рельеф при наведении
         }
