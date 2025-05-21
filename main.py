@@ -80,8 +80,8 @@ class ГлавноеОкно(tk.Tk):
         пустая_иконка = Image.new('RGBA', (16, 16), (0, 0, 0, 0))  # Создаем прозрачную иконку
         self.иконки = {
             "не_начато": ImageTk.PhotoImage(пустая_иконка),
-            "в_процессе": ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'assets', 'file-edit.png')).resize((16, 16))),
-            "завершено": ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'assets', 'file-check.png')).resize((16, 16)))
+            "в_процессе": ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'иконки', 'file-edit.png')).resize((16, 16))),
+            "завершено": ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'иконки', 'file-check.png')).resize((16, 16)))
         }
         
         # Создаем группу Приказы
