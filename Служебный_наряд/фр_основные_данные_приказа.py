@@ -4,8 +4,22 @@ from datetime import date
 from tkcalendar import DateEntry
 from виджиты.ви_ПоискОфицера import ПоискОфицера
 from .фр_согласование import ФреймСогласование
+import os
+import json
 
 class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
+    _default_approvers_by_type = {}
+    # Файл рядом с main.py или exe
+    @staticmethod
+    def _get_approvers_file():
+        import sys
+        if getattr(sys, 'frozen', False):
+            # pyinstaller exe
+            base_dir = os.path.dirname(sys.executable)
+        else:
+            base_dir = os.path.dirname(os.path.abspath(__import__('__main__').__file__))
+        return os.path.join(base_dir, 'default_approvers.json')
+
     def __init__(self, master=None, *args, **kwargs):
         super().__init__(master, text='_основные_данные_приказа_', style='Custom.TLabelframe', *args, **kwargs)
         self.configure(width=400, height=320)
@@ -88,7 +102,10 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
         self.frame_согласование = ttk.Frame(self.content_frame)
         self.frame_согласование.grid(row=6, column=1, sticky="ew", padx=5, pady=2)
         self.frame_согласование.columnconfigure(0, weight=1)
-        self.согласующие = []
+        self._approvers_file = self._get_approvers_file()
+        self._load_approvers_from_file()
+        self.тип_приказа = kwargs.get('тип_приказа', 'суточный приказ')
+        self.согласующие = self._get_default_approvers()
         self._update_согласование_view()
         # Пустые фреймы для фиксированной высоты строк
         for i in range(7):
@@ -104,9 +121,61 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
     def _on_kontrol_click(self, event):
         self._show_search_widget(self.контроль, 5)
 
+    def _load_approvers_from_file(self):
+        try:
+            if not os.path.exists(self._approvers_file):
+                with open(self._approvers_file, 'w', encoding='utf-8') as f:
+                    json.dump({}, f)
+            with open(self._approvers_file, 'r', encoding='utf-8') as f:
+                self._default_approvers_by_type = json.load(f)
+        except Exception as e:
+            print(f"Ошибка загрузки согласующих: {e}")
+
+    def _save_approvers_to_file(self):
+        try:
+            # Сохраняем только id офицеров
+            data_to_save = {}
+            for тип, список in self._default_approvers_by_type.items():
+                # Если список уже список id (int), сохраняем как есть
+                if список and isinstance(список[0], int):
+                    data_to_save[тип] = список
+                else:
+                    data_to_save[тип] = [оф['id'] for оф in список if isinstance(оф, dict) and 'id' in оф]
+            with open(self._approvers_file, 'w', encoding='utf-8') as f:
+                json.dump(data_to_save, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Ошибка сохранения согласующих: {e}")
+
+    def _get_default_approvers(self):
+        # Получить список согласующих для текущего типа приказа (по id)
+        ids = self._default_approvers_by_type.get(self.тип_приказа, [])
+        if not ids:
+            return []
+        from справочники import СПРАВОЧНИК_ОФИЦЕРОВ, СПРАВОЧНИК_ЗВАНИЙ
+        result = []
+        for oid in ids:
+            оф = next((x for x in СПРАВОЧНИК_ОФИЦЕРОВ if x.get('id') == oid), None)
+            if оф:
+                офицер = оф.copy()
+                # Добавляем строку звания и сокращение
+                звание = ''
+                сокращение = ''
+                if офицер.get('звание_id'):
+                    звание_row = next((z for z in СПРАВОЧНИК_ЗВАНИЙ if z['id'] == офицер['звание_id']), None)
+                    if звание_row:
+                        звание = звание_row.get('наименование', '')
+                        сокращение = звание_row.get('сокращение', '')
+                офицер['звание'] = звание
+                офицер['сокращение'] = сокращение
+                result.append(офицер)
+        return result
+
     def _on_согласование_click(self, event=None):
         def on_done(список):
             self.согласующие = список
+            # Сохраняем только id офицеров для типа приказа
+            self._default_approvers_by_type[self.тип_приказа] = [оф['id'] for оф in список if 'id' in оф]
+            self._save_approvers_to_file()
             self._update_согласование_view()
         ФреймСогласование(self, согласующие=self.согласующие, callback=on_done)
 

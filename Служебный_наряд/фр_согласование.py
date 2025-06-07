@@ -110,6 +110,13 @@ class ФреймСогласование(tk.Toplevel):
     def _on_ok(self):
         if self.callback:
             self.callback(self.согласующие)
+        # Сохраняем согласующих в файл, если основной фрейм доступен
+        try:
+            if hasattr(self.master, '_save_approvers_to_file') and hasattr(self.master, 'тип_приказа'):
+                self.master._default_approvers_by_type[self.master.тип_приказа] = [оф['id'] for оф in self.согласующие if 'id' in оф]
+                self.master._save_approvers_to_file()
+        except Exception as e:
+            print(f"Ошибка автосохранения согласующих: {e}")
         self.destroy()
 
     def _on_cancel(self):
