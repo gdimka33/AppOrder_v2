@@ -4,22 +4,9 @@ from datetime import date
 from tkcalendar import DateEntry
 from виджиты.ви_ПоискОфицера import ПоискОфицера
 from .фр_согласование import ФреймСогласование
-import os
-import json
+from .approvers_storage import ApproversStorage
 
 class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
-    _default_approvers_by_type = {}
-    # Файл рядом с main.py или exe
-    @staticmethod
-    def _get_approvers_file():
-        import sys
-        if getattr(sys, 'frozen', False):
-            # pyinstaller exe
-            base_dir = os.path.dirname(sys.executable)
-        else:
-            base_dir = os.path.dirname(os.path.abspath(__import__('__main__').__file__))
-        return os.path.join(base_dir, 'default_approvers.json')
-
     def __init__(self, master=None, *args, **kwargs):
         super().__init__(master, text='_основные_данные_приказа_', style='Custom.TLabelframe', *args, **kwargs)
         self.configure(width=400, height=320)
@@ -30,6 +17,9 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
         self.content_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.content_frame.grid_propagate(False)
         self.content_frame.grid_columnconfigure(1, minsize=220, weight=0)
+
+        self.тип_приказа = kwargs.get('тип_приказа', 'суточный приказ')
+        self.storage = ApproversStorage()
 
         # Дата создания
         ttk.Label(self.content_frame, text="Дата создания:").grid(row=0, column=0, sticky="w", padx=5, pady=2)
@@ -80,6 +70,7 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
         )
         self.руководитель.grid(row=4, column=1, sticky="ew", padx=5, pady=2)
         self.руководитель.bind("<Button-1>", self._on_ruk_click)
+        self._load_saved_officer(self.руководитель, 'руководитель')
 
         # Контроль
         ttk.Label(self.content_frame, text="Контроль:").grid(row=5, column=0, sticky="w", padx=5, pady=2)
@@ -96,16 +87,14 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
         )
         self.контроль.grid(row=5, column=1, sticky="ew", padx=5, pady=2)
         self.контроль.bind("<Button-1>", self._on_kontrol_click)
+        self._load_saved_officer(self.контроль, 'контроль')
 
         # Согласование
         ttk.Label(self.content_frame, text="Согласование:").grid(row=6, column=0, sticky="w", padx=5, pady=2)
         self.frame_согласование = ttk.Frame(self.content_frame)
         self.frame_согласование.grid(row=6, column=1, sticky="ew", padx=5, pady=2)
         self.frame_согласование.columnconfigure(0, weight=1)
-        self._approvers_file = self._get_approvers_file()
-        self._load_approvers_from_file()
-        self.тип_приказа = kwargs.get('тип_приказа', 'суточный приказ')
-        self.согласующие = self._get_default_approvers()
+        self.согласующие = self._get_approvers('согласование')
         self._update_согласование_view()
         # Пустые фреймы для фиксированной высоты строк
         for i in range(7):
@@ -113,42 +102,16 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
             spacer.grid(row=i, column=2)
 
     def _on_lbl_click(self, event):
-        self._show_search_widget(self.исполнитель, 3)
+        self._show_search_widget(self.исполнитель, 3, None)
 
     def _on_ruk_click(self, event):
-        self._show_search_widget(self.руководитель, 4)
+        self._show_search_widget(self.руководитель, 4, 'руководитель')
 
     def _on_kontrol_click(self, event):
-        self._show_search_widget(self.контроль, 5)
+        self._show_search_widget(self.контроль, 5, 'контроль')
 
-    def _load_approvers_from_file(self):
-        try:
-            if not os.path.exists(self._approvers_file):
-                with open(self._approvers_file, 'w', encoding='utf-8') as f:
-                    json.dump({}, f)
-            with open(self._approvers_file, 'r', encoding='utf-8') as f:
-                self._default_approvers_by_type = json.load(f)
-        except Exception as e:
-            print(f"Ошибка загрузки согласующих: {e}")
-
-    def _save_approvers_to_file(self):
-        try:
-            # Сохраняем только id офицеров
-            data_to_save = {}
-            for тип, список in self._default_approvers_by_type.items():
-                # Если список уже список id (int), сохраняем как есть
-                if список and isinstance(список[0], int):
-                    data_to_save[тип] = список
-                else:
-                    data_to_save[тип] = [оф['id'] for оф in список if isinstance(оф, dict) and 'id' in оф]
-            with open(self._approvers_file, 'w', encoding='utf-8') as f:
-                json.dump(data_to_save, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"Ошибка сохранения согласующих: {e}")
-
-    def _get_default_approvers(self):
-        # Получить список согласующих для текущего типа приказа (по id)
-        ids = self._default_approvers_by_type.get(self.тип_приказа, [])
+    def _get_approvers(self, role):
+        ids = self.storage.get(self.тип_приказа, role)
         if not ids:
             return []
         from справочники import СПРАВОЧНИК_ОФИЦЕРОВ, СПРАВОЧНИК_ЗВАНИЙ
@@ -157,7 +120,6 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
             оф = next((x for x in СПРАВОЧНИК_ОФИЦЕРОВ if x.get('id') == oid), None)
             if оф:
                 офицер = оф.copy()
-                # Добавляем строку звания и сокращение
                 звание = ''
                 сокращение = ''
                 if офицер.get('звание_id'):
@@ -173,9 +135,7 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
     def _on_согласование_click(self, event=None):
         def on_done(список):
             self.согласующие = список
-            # Сохраняем только id офицеров для типа приказа
-            self._default_approvers_by_type[self.тип_приказа] = [оф['id'] for оф in список if 'id' in оф]
-            self._save_approvers_to_file()
+            self.storage.set(self.тип_приказа, 'согласование', [оф['id'] for оф in список if 'id' in оф])
             self._update_согласование_view()
         ФреймСогласование(self, согласующие=self.согласующие, callback=on_done)
 
@@ -205,7 +165,7 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
                 label.pack(fill='x', pady=1)
                 label.bind('<Button-1>', self._on_согласование_click)
 
-    def _show_search_widget(self, label_widget, row):
+    def _show_search_widget(self, label_widget, row, role=None):
         def on_select(офицер):
             if офицер:
                 фамилия = офицер.get('фамилия', '').capitalize()
@@ -227,6 +187,8 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
                 label_widget.configure(text=отображение, font=("TkDefaultFont", 9, "normal"))
                 tooltip_text = self._get_full_officer_info(офицер)
                 self._add_tooltip(label_widget, tooltip_text)
+                if role:
+                    self.storage.set(self.тип_приказа, role, [офицер['id']])
             if поиск.winfo_exists():
                 поиск.destroy()
             label_widget.grid()
@@ -252,6 +214,38 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
 
         поиск.bind_all('<Button-1>', on_click_outside, add='+')
         поиск.entry.bind('<FocusOut>', on_focus_out)
+
+    def _load_saved_officer(self, label_widget, role):
+        ids = self.storage.get(self.тип_приказа, role)
+        if ids:
+            from справочники import СПРАВОЧНИК_ОФИЦЕРОВ, СПРАВОЧНИК_ЗВАНИЙ
+            oid = ids[0]
+            оф = next((x for x in СПРАВОЧНИК_ОФИЦЕРОВ if x.get('id') == oid), None)
+            if оф:
+                фамилия = оф.get('фамилия', '').capitalize()
+                имя = оф.get('имя', '')
+                отчество = оф.get('отчество', '')
+                инициалы = ''
+                if имя:
+                    инициалы += (имя[0] + '.').upper()
+                if отчество:
+                    инициалы += (отчество[0] + '.').upper()
+                звание = ''
+                if оф.get('звание_id'):
+                    from справочники import СПРАВОЧНИК_ЗВАНИЙ
+                    звание_row = next((z for z in СПРАВОЧНИК_ЗВАНИЙ if z['id'] == оф['звание_id']), None)
+                    if звание_row:
+                        звание = звание_row.get('наименование', '')
+                отображение = f"{фамилия} {инициалы}".strip()
+                if звание:
+                    отображение = f"{отображение}, {звание}"
+                отображение = ' '.join(отображение.split())
+                макс_длина = 40
+                if len(отображение) > макс_длина:
+                    отображение = отображение[:макс_длина-3] + '...'
+                label_widget.configure(text=отображение, font=("TkDefaultFont", 9, "normal"))
+                tooltip_text = self._get_full_officer_info(оф)
+                self._add_tooltip(label_widget, tooltip_text)
 
     def _get_full_officer_info(self, офицер):
         # Формирует строку для tooltip
