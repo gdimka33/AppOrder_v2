@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-from .фр_основные_данные_приказа import ФреймОсновныеДанныеПриказа
-from .фр_состав_наряда import ФреймСоставНаряда
+from Служебный_наряд.фр_основные_данные_приказа import ФреймОсновныеДанныеПриказа
+from Служебный_наряд.фр_состав_наряда import ФреймСоставНаряда
 
 class ПриказСлужебныйНаряд(tk.Frame):
     def __init__(self, master=None, *args, **kwargs):
