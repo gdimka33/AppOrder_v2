@@ -35,7 +35,8 @@ class ПоискОфицера(ttk.Frame):
         self.entry.bind("<FocusOut>", self._on_focus_out)
         self.entry.bind("<KeyRelease>", self._on_key_release)
         self.entry.bind("<Return>", self._on_return)
-        self.entry.bind("<Escape>", self._скрыть_список)
+        self.entry.bind("<Escape>", self._on_escape)
+        self._bind_click_outside()
 
     def _создать_список(self):
         if self.popup:
@@ -219,6 +220,24 @@ class ПоискОфицера(ttk.Frame):
             self._выбрать_элемент()
             return "break"
         return None
+
+    def _on_escape(self, event=None):
+        self.очистить()
+        self.entry.selection_clear()
+        self.entry.icursor(0)
+        self.entry.event_generate('<FocusOut>')
+        self.entry.master.focus_set()
+        return "break"
+
+    def _bind_click_outside(self):
+        def on_click(event):
+            widget = event.widget
+            # Если клик вне entry и вне popup
+            if not (widget is self.entry or (self.popup and str(widget).startswith(str(self.popup)))):
+                self.очистить()
+                self.entry.event_generate('<FocusOut>')
+                self.entry.master.focus_set()
+        self.entry.bind_all('<Button-1>', on_click, add='+')
 
     def очистить(self):
         self.entry.delete(0, tk.END)
