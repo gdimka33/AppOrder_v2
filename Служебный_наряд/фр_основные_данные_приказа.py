@@ -3,6 +3,7 @@ from tkinter import ttk
 from datetime import date
 from tkcalendar import DateEntry
 from виджиты.ви_ПоискОфицера import ПоискОфицера
+from .фр_согласование import ФреймСогласование
 
 class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
     def __init__(self, master=None, *args, **kwargs):
@@ -84,8 +85,11 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
 
         # Согласование
         ttk.Label(self.content_frame, text="Согласование:").grid(row=6, column=0, sticky="w", padx=5, pady=2)
-        # Здесь будет размещен фрейм согласования
-
+        self.frame_согласование = ttk.Frame(self.content_frame)
+        self.frame_согласование.grid(row=6, column=1, sticky="ew", padx=5, pady=2)
+        self.frame_согласование.columnconfigure(0, weight=1)
+        self.согласующие = []
+        self._update_согласование_view()
         # Пустые фреймы для фиксированной высоты строк
         for i in range(7):
             spacer = tk.Frame(self.content_frame, height=30)
@@ -99,6 +103,38 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
 
     def _on_kontrol_click(self, event):
         self._show_search_widget(self.контроль, 5)
+
+    def _on_согласование_click(self, event=None):
+        def on_done(список):
+            self.согласующие = список
+            self._update_согласование_view()
+        ФреймСогласование(self, согласующие=self.согласующие, callback=on_done)
+
+    def _update_согласование_view(self):
+        # Очистить frame_согласование
+        for widget in self.frame_согласование.winfo_children():
+            widget.destroy()
+        if not self.согласующие:
+            label = tk.Label(self.frame_согласование, text="Добавить", font=("TkDefaultFont", 9, "italic"), cursor="hand2", anchor="w", fg="#0077cc")
+            label.pack(fill='x', pady=2)
+            label.bind('<Button-1>', self._on_согласование_click)
+        else:
+            for оф in self.согласующие:
+                фам = оф.get('фамилия', '').capitalize()
+                имя = оф.get('имя', '')
+                отч = оф.get('отчество', '')
+                инициалы = ''
+                if имя:
+                    инициалы += (имя[0] + '.').upper()
+                if отч:
+                    инициалы += (отч[0] + '.').upper()
+                звание = оф.get('звание', '')
+                отображение = f"{фам} {инициалы}".strip()
+                if звание:
+                    отображение = f"{отображение}, {звание}"
+                label = tk.Label(self.frame_согласование, text=отображение, font=("TkDefaultFont", 9, "normal"), anchor="w", cursor="hand2")
+                label.pack(fill='x', pady=1)
+                label.bind('<Button-1>', self._on_согласование_click)
 
     def _show_search_widget(self, label_widget, row):
         def on_select(офицер):
