@@ -165,7 +165,7 @@ class ПоискОфицера(ttk.Frame):
             self.popup.lift()
 
     def _скрыть_список(self, event=None):
-        if self.popup:
+        if self.popup and self.popup.winfo_exists():
             self.popup.withdraw()
 
     def _on_mouse_motion(self, event):
@@ -235,14 +235,18 @@ class ПоискОфицера(ttk.Frame):
             # Если клик вне entry и вне popup
             if not (widget is self.entry or (self.popup and str(widget).startswith(str(self.popup)))):
                 self.очистить()
-                self.entry.event_generate('<FocusOut>')
-                self.entry.master.focus_set()
+                if hasattr(self, 'entry') and self.entry.winfo_exists():
+                    self.entry.event_generate('<FocusOut>')
+                if hasattr(self, 'entry') and self.entry.winfo_exists():
+                    self.entry.master.focus_set()
         self.entry.bind_all('<Button-1>', on_click, add='+')
 
     def очистить(self):
-        self.entry.delete(0, tk.END)
-        self.entry.insert(0, self.placeholder)
-        self.entry.config(foreground='gray')
+        # Безопасно очищаем entry только если он существует
+        if hasattr(self, 'entry') and self.entry.winfo_exists():
+            self.entry.delete(0, tk.END)
+            self.entry.insert(0, self.placeholder)
+            self.entry.config(foreground='gray')
         self._скрыть_список()
         self.результаты_поиска = []
         self.выбранный_офицер = None

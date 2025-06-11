@@ -90,7 +90,7 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
         self._load_saved_officer(self.контроль, 'контроль')
 
         # Согласование
-        ttk.Label(self.content_frame, text="Согласование:").grid(row=6, column=0, sticky="w", padx=5, pady=2)
+        ttk.Label(self.content_frame, text="Согласование:").grid(row=6, column=0, sticky="nw", padx=5, pady=2)
         self.frame_согласование = ttk.Frame(self.content_frame)
         self.frame_согласование.grid(row=6, column=1, sticky="ew", padx=5, pady=2)
         self.frame_согласование.columnconfigure(0, weight=1)
