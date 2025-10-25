@@ -17,11 +17,32 @@ class СогласованиеСохранение:
 
     def _load(self):
         """Загружает данные из JSON-файла, если он существует."""
+        default_path = self.storage_path.parent / 'default_approvers.json'
         if self.storage_path.exists():
             try:
                 with open(self.storage_path, 'r', encoding='utf-8') as f:
                     self.data = json.load(f)
             except (json.JSONDecodeError, IOError):
+                self.data = {}
+            # Если файл существует, но пустой — попытаемся инициализировать из default
+            if not self.data and default_path.exists():
+                try:
+                    with open(default_path, 'r', encoding='utf-8') as f:
+                        self.data = json.load(f)
+                    self._save()
+                except (json.JSONDecodeError, IOError):
+                    self.data = {}
+        else:
+            # Попробовать инициализировать из default_approvers.json в корне проекта
+            if default_path.exists():
+                try:
+                    with open(default_path, 'r', encoding='utf-8') as f:
+                        self.data = json.load(f)
+                    # Сохранить в data_approvers.json для дальнейшего использования
+                    self._save()
+                except (json.JSONDecodeError, IOError):
+                    self.data = {}
+            else:
                 self.data = {}
 
     def _save(self):

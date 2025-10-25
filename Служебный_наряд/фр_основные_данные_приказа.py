@@ -20,6 +20,12 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
 
         self.тип_приказа = kwargs.get('тип_приказа', 'суточный приказ')
         self.storage = СогласованиеСохранение()
+        # Кэш/словарь для хранения значений по умолчанию (используется фреймом согласования)
+        # Инициализируем из уже загруженных данных хранилища
+        try:
+            self._default_approvers_by_type = dict(self.storage.data or {})
+        except Exception:
+            self._default_approvers_by_type = {}
 
         # Дата создания
         ttk.Label(self.content_frame, text="Дата создания:").grid(row=0, column=0, sticky="w", padx=5, pady=2)
@@ -100,6 +106,15 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
         for i in range(7):
             spacer = tk.Frame(self.content_frame, height=30)
             spacer.grid(row=i, column=2)
+
+    def _save_approvers_to_file(self):
+        """Сохранить текущие default approvers в файл через объект хранения."""
+        try:
+            # Копируем в storage и сохраняем
+            self.storage.data = dict(self._default_approvers_by_type or {})
+            self.storage._save()
+        except Exception:
+            pass
 
     def _on_lbl_click(self, event):
         self._show_search_widget(self.исполнитель, 3, None)
