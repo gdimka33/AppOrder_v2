@@ -4,3 +4,4 @@ __pycache__
 *.log
 database.db
 default_approvers.json
+data_approvers.json

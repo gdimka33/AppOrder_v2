@@ -3,8 +3,8 @@ from tkinter import ttk
 from datetime import date
 from tkcalendar import DateEntry
 from виджиты.ви_ПоискОфицера import ПоискОфицера
-from .фр_согласование import ФреймСогласование
-from .approvers_storage import ApproversStorage
+from Служебный_наряд.фр_согласование import ФреймСогласование
+from Служебный_наряд.фр_согласование_сохранение import СогласованиеСохранение
 
 class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
     def __init__(self, master=None, *args, **kwargs):
@@ -19,7 +19,7 @@ class ФреймОсновныеДанныеПриказа(ttk.LabelFrame):
         self.content_frame.grid_columnconfigure(1, minsize=220, weight=0)
 
         self.тип_приказа = kwargs.get('тип_приказа', 'суточный приказ')
-        self.storage = ApproversStorage()
+        self.storage = СогласованиеСохранение()
 
         # Дата создания
         ttk.Label(self.content_frame, text="Дата создания:").grid(row=0, column=0, sticky="w", padx=5, pady=2)
